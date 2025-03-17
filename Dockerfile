@@ -35,3 +35,7 @@ RUN R -e "install.packages(c(\
     repos='https://cran.rstudio.com/', \
     dependencies=TRUE)"
 
+RUN R -e "install.packages(c(\
+    'lavaan'), \
+    repos='https://cran.rstudio.com/', \
+    dependencies=TRUE)"
