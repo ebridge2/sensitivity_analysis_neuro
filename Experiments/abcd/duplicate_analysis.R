@@ -77,7 +77,6 @@ Xs <- full.data %>%
 ## --------------- Total Effects ---------------- ##
 
 total_effect_results <- do.call(rbind, lapply(names(Ys)[1:nroi], function(roi) {
-  time.st = Sys.time()
   print(roi)
   Y.vol <- data.frame(Ys[[roi]]); names(Y.vol) = roi
   data <- cbind(Xs, Y.vol)
@@ -85,8 +84,7 @@ total_effect_results <- do.call(rbind, lapply(names(Ys)[1:nroi], function(roi) {
   formula <- as.formula(paste0(roi, " ~ Race + X.age + X.male + X.scanner_model + X.site + (1|X.family.id)"))
   
   # Get bootstrap results
-  boot_results <- robust_parameter_analysis(data, formula, "RaceBlack", n_boot = nrep, n_perm=nrep)
-  time.end = Sys.time()
+  boot_results <- robust_parameter_analysis(data, formula, "Race", n_boot = nrep, n_perm=nrep)
   
   data.frame(
     model = "Total Effect",
@@ -120,7 +118,7 @@ mediator_results <- do.call(rbind, lapply(adversity_vars, function(adv_var) {
     
     formula <- as.formula(paste0(roi, " ~ ", adv_var, " + X.age + X.male + X.scanner_model + X.site + (1|X.family.id)"))
     
-    boot_results <- robust_parameter_analysis(data, formula, adv_var, n_boot = 100, 100)
+    boot_results <- robust_parameter_analysis(data, formula, adv_var, n_boot = nrep, n_perm=nrep)
     
     data.frame(
       model = "Mediator Effect",
@@ -134,3 +132,20 @@ mediator_results <- do.call(rbind, lapply(adversity_vars, function(adv_var) {
     )
   }))
 }))
+
+## -------------- Parallel Mediation Analysis -------------- ##
+
+parallel_mediation_results <- do.call(rbind, lapply(names(Ys)[1:nroi], function(roi) {
+  Y.vol <- data.frame(Ys[[roi]]); names(Y.vol) = roi
+  data <- cbind(Xs, Y.vol)
+  
+  covars <- c("X.age", "X.male", "X.scanner_model", "X.site")
+  med_results <- parallel_med_analysis(
+    data, covars, adversity_vars, roi, "Race", random_effect="family.id",
+    n_boot = 1000, ncores = detectCores() - 1
+  )
+  return(med_results)
+}))
+
+saveRDS(list(race_marginal = total_effect_results, mediator_marginal = mediator_results, parallel_mediation = parallel_mediation_results),
+        "../../data/abcd/mediation_analysis_duplicate.rds")
